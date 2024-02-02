@@ -7,9 +7,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileInputStream;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.Key;
+import java.io.IOException;
+import java.security.*;
 import java.util.Base64;
 import java.util.Enumeration;
 import java.util.Map;
@@ -17,7 +16,7 @@ import javax.swing.JComboBox;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.*;
 import net.minidev.json.JSONObject;
-import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 
 
 public class HelloApplication {
@@ -182,7 +181,7 @@ public class HelloApplication {
             Key key = null;
 
             try {
-                key = keyStore.getKey(selectedAlias, null);
+                key = HelloApplication.getPrivateKey(keyStore, selectedAlias, null);
             } catch (UnrecoverableKeyException ex) {
                 JPasswordField pwd = new JPasswordField(10);
                 action = JOptionPane.showConfirmDialog(null, pwd, "Ingresa la contraseña del certificado", JOptionPane.OK_CANCEL_OPTION);
@@ -190,7 +189,7 @@ public class HelloApplication {
                     privateKeyTextArea.setText("Carga de certificado cancelada.");
                     return;
                 }
-                key = keyStore.getKey(selectedAlias, pwd.getPassword());
+                key = HelloApplication.getPrivateKey(keyStore, selectedAlias, pwd.getPassword());
             }
 
             if (key == null) {
@@ -260,6 +259,35 @@ public class HelloApplication {
         } catch (Exception ex) {
             ex.printStackTrace();
             privateKeyTextArea.setText("Error al cargar el certificado: " + ex.getMessage());
+        }
+    }
+
+
+    /**
+     * Recupera la clave privada del almacén de certificados de Windows.
+     *
+     * @param alias El alias del certificado cuya clave privada se quiere recuperar.
+     * @param password La contraseña de la clave privada, o null si no hay contraseña.
+     * @return La clave privada asociada con el certificado.
+     * @throws KeyStoreException Si ocurre un error al acceder al KeyStore.
+     * @throws NoSuchAlgorithmException Si el algoritmo de la clave no puede ser encontrado.
+     * @throws UnrecoverableKeyException Si la clave no puede ser recuperada (por ejemplo, contraseña incorrecta).
+     * @throws CertificateException Si hay un error al cargar los certificados del KeyStore.
+     * @throws IOException Si ocurre un error de E/S al cargar el KeyStore.
+     */
+    public static PrivateKey getPrivateKey(KeyStore keyStore, String alias, char[] password)
+            throws KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException,
+            CertificateException, IOException {
+
+
+
+        // Intentar recuperar la clave privada usando el alias y la contraseña
+        Key key = keyStore.getKey(alias, password);
+
+        if (key instanceof PrivateKey) {
+            return (PrivateKey) key;
+        } else {
+            throw new KeyStoreException("La clave privada para el alias '" + alias + "' no fue encontrada o no es una clave privada.");
         }
     }
 
